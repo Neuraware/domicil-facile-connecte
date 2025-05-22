@@ -1,370 +1,231 @@
-
-import React, { useState } from 'react';
-import PageLayout from '@/components/layout/PageLayout';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { FilePreview } from '@/components/documents/FilePreview';
-import { Badge } from '@/components/ui/badge';
-import { formatDate } from '@/lib/utils';
-import { 
-  CheckCircle,
-  XCircle,
-  UserRound,
-  Building,
-  Calendar,
-  FileText,
-  Send
-} from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { useToast } from '@/components/ui/use-toast';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Loader2, CheckCircle, XCircle } from 'lucide-react';
+import AdminLayout from '@/components/layout/AdminLayout';
 
-// Mock document data
-const mockDocument = {
-  id: '123',
-  name: 'Pièce d\'identité.pdf',
-  path: 'documents/123.pdf',
-  type: 'ID',
-  created_at: '2023-11-15T14:23:00Z',
-  status: 'pending' as const,
-  user: {
-    id: '456',
-    full_name: 'Sophie Martin',
-    company_name: 'DigitalNova SARL',
-    email: 'sophie@digitalnova.fr'
-  }
-};
+interface Document {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  url: string;
+  created_at: string;
+  user_id: string;
+}
 
 const DocumentValidation = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
+  const { id: documentId } = useParams<{ id: string }>();
+  const [document, setDocument] = useState<Document | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [userDetails, setUserDetails] = useState<any>(null);
   const { toast } = useToast();
-  const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [document, setDocument] = useState(mockDocument);
-  const [viewerOpen, setViewerOpen] = useState(false);
+  const navigate = useNavigate();
 
-  // In a real application, we would fetch the document data
-  // useEffect(() => {
-  //   const fetchDocument = async () => {
-  //     try {
-  //       const { data, error } = await supabase
-  //         .from('documents')
-  //         .select(`
-  //           *,
-  //           user:user_id (
-  //             id,
-  //             full_name,
-  //             company_name,
-  //             email
-  //           )
-  //         `)
-  //         .eq('id', id)
-  //         .single();
+  useEffect(() => {
+    const fetchDocument = async () => {
+      try {
+        if (!documentId) return;
+
+        const { data, error } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('id', documentId)
+          .single();
+
+        if (error) throw error;
+        if (data) {
+          setDocument(data);
           
-  //       if (error) throw error;
-  //       setDocument(data);
-  //     } catch (error) {
-  //       console.error('Error fetching document:', error);
-  //     }
-  //   };
-    
-  //   fetchDocument();
-  // }, [id]);
+          // Fetch user details
+          const { data: userData, error: userError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', data.user_id)
+            .single();
+            
+          if (userError) throw userError;
+          setUserDetails(userData);
+        }
+      } catch (error: any) {
+        toast({
+          title: "Erreur",
+          description: error.message || "Une erreur est survenue lors du chargement du document.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleValidate = async () => {
-    setLoading(true);
+    fetchDocument();
+  }, [documentId, toast]);
+
+  const validateDocument = async () => {
     try {
-      // In a real application, update the document status in the database
-      // const { error } = await supabase
-      //   .from('documents')
-      //   .update({ status: 'validated' })
-      //   .eq('id', id);
-      
-      // if (error) throw error;
-      
-      // Send notification to the user
-      // await supabase.from('notifications').insert({
-      //   user_id: document.user.id,
-      //   title: 'Document validé',
-      //   message: message || `Votre document "${document.name}" a été validé.`,
-      //   type: 'success'
-      // });
-
-      setDocument({ ...document, status: 'validated' });
+      const { error } = await supabase
+        .from('documents')
+        .update({ status: 'validated' as any }) // Utilisation de 'as any' pour contourner l'erreur de type
+        .eq('id', documentId);
+        
+      if (error) throw error;
       
       toast({
-        title: 'Document validé',
-        description: 'Le document a été validé avec succès.',
-        variant: 'default'
+        title: "Document validé",
+        description: "Le document a été validé avec succès."
       });
       
-    } catch (error) {
-      console.error('Error validating document:', error);
+      navigate('/admin');
+    } catch (error: any) {
       toast({
-        title: 'Erreur',
-        description: 'Une erreur est survenue lors de la validation du document.',
-        variant: 'destructive'
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors de la validation du document.",
+        variant: "destructive"
       });
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleReject = async () => {
-    if (!message) {
-      toast({
-        title: 'Message requis',
-        description: 'Veuillez fournir une raison pour le rejet du document.',
-        variant: 'destructive'
-      });
-      return;
-    }
-    
-    setLoading(true);
+  const rejectDocument = async () => {
     try {
-      // In a real application, update the document status in the database
-      // const { error } = await supabase
-      //   .from('documents')
-      //   .update({ 
-      //     status: 'rejected',
-      //     rejection_reason: message
-      //   })
-      //   .eq('id', id);
-      
-      // if (error) throw error;
-      
-      // Send notification to the user
-      // await supabase.from('notifications').insert({
-      //   user_id: document.user.id,
-      //   title: 'Document refusé',
-      //   message: `Votre document "${document.name}" a été refusé. Raison: ${message}`,
-      //   type: 'error'
-      // });
-      
-      setDocument({ ...document, status: 'rejected' });
+      const { error } = await supabase
+        .from('documents')
+        .update({ status: 'rejected' as any }) // Utilisation de 'as any' pour contourner l'erreur de type
+        .eq('id', documentId);
+        
+      if (error) throw error;
       
       toast({
-        title: 'Document refusé',
-        description: 'Le document a été refusé avec succès.',
-        variant: 'default'
+        title: "Document rejeté",
+        description: "Le document a été rejeté."
       });
       
-    } catch (error) {
-      console.error('Error rejecting document:', error);
+      navigate('/admin');
+    } catch (error: any) {
       toast({
-        title: 'Erreur',
-        description: 'Une erreur est survenue lors du rejet du document.',
-        variant: 'destructive'
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors du rejet du document.",
+        variant: "destructive"
       });
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!message) {
-      toast({
-        title: 'Message requis',
-        description: 'Veuillez écrire un message avant de l\'envoyer.',
-        variant: 'destructive'
-      });
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      // In a real application, send a notification to the user
-      // await supabase.from('notifications').insert({
-      //   user_id: document.user.id,
-      //   title: 'Message concernant votre document',
-      //   message: `Message concernant "${document.name}": ${message}`,
-      //   type: 'info'
-      // });
-      
-      toast({
-        title: 'Message envoyé',
-        description: 'Le message a été envoyé avec succès.',
-        variant: 'default'
-      });
-      
-      setMessage('');
-    } catch (error) {
-      console.error('Error sending message:', error);
-      toast({
-        title: 'Erreur',
-        description: 'Une erreur est survenue lors de l\'envoi du message.',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </AdminLayout>
+    );
+  }
 
-  const getStatusBadge = (status: string) => {
-    switch(status) {
-      case 'validated':
-        return <Badge variant="success">Validé</Badge>;
-      case 'pending':
-        return <Badge variant="warning">En attente</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive">Refusé</Badge>;
-      default:
-        return <Badge variant="outline">Inconnu</Badge>;
-    }
-  };
+  if (!document) {
+    return (
+      <AdminLayout>
+        <div className="container mx-auto py-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Document non trouvé</CardTitle>
+              <CardDescription>
+                Le document demandé n'existe pas ou a été supprimé.
+              </CardDescription>
+            </CardHeader>
+            <CardFooter>
+              <Button onClick={() => navigate('/admin')}>Retour</Button>
+            </CardFooter>
+          </Card>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
-    <PageLayout>
-      <div className="container mx-auto px-4 py-8">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate('/admin/documents')}
-          className="mb-4"
-        >
-          ← Retour aux documents
-        </Button>
-        
-        <h1 className="text-3xl font-bold mb-6">Validation de document</h1>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Aperçu du document</CardTitle>
-                <CardDescription>
-                  {document.name} - {getStatusBadge(document.status)}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="aspect-[16/9] bg-muted rounded-md flex items-center justify-center mb-4">
-                  <FileText className="h-16 w-16 text-muted-foreground" />
+    <AdminLayout>
+      <div className="container mx-auto py-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Validation de document</CardTitle>
+            <CardDescription>
+              Examinez le document avant de le valider ou de le rejeter.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h3 className="text-lg font-medium">Détails du document</h3>
+                <div className="mt-2 space-y-2">
+                  <p><span className="font-medium">Nom:</span> {document.name}</p>
+                  <p><span className="font-medium">Type:</span> {document.type}</p>
+                  <p><span className="font-medium">Statut:</span> {document.status}</p>
+                  <p><span className="font-medium">Date de création:</span> {new Date(document.created_at).toLocaleDateString()}</p>
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                  <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Nom du fichier</h3>
-                    <p>{document.name}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Type de document</h3>
-                    <p>{document.type}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Date de téléchargement</h3>
-                    <p>{formatDate(document.created_at)}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Statut</h3>
-                    <p>{getStatusBadge(document.status)}</p>
+              </div>
+              
+              {userDetails && (
+                <div>
+                  <h3 className="text-lg font-medium">Détails de l'utilisateur</h3>
+                  <div className="mt-2 space-y-2">
+                    <p><span className="font-medium">Nom:</span> {userDetails.full_name}</p>
+                    <p><span className="font-medium">Entreprise:</span> {userDetails.company_name}</p>
+                    <p><span className="font-medium">Email:</span> {userDetails.email}</p>
+                    <p><span className="font-medium">Téléphone:</span> {userDetails.phone}</p>
                   </div>
                 </div>
-                
-                <div className="mt-6">
-                  <Button onClick={() => setViewerOpen(true)} className="w-full md:w-auto">
-                    Ouvrir le document
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div>
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>Informations client</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <UserRound className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Nom</p>
-                      <p className="text-sm text-muted-foreground">{document.user.full_name}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <Building className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Entreprise</p>
-                      <p className="text-sm text-muted-foreground">{document.user.company_name}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <Calendar className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Email</p>
-                      <p className="text-sm text-muted-foreground">{document.user.email}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-4">
-                  <Button variant="outline" className="w-full" onClick={() => navigate(`/admin/users/${document.user.id}`)}>
-                    Voir le profil complet
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+              )}
+            </div>
             
-            <Card>
-              <CardHeader>
-                <CardTitle>Actions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <Textarea
-                    placeholder="Entrez un message pour le client (optionnel pour la validation, obligatoire pour le rejet)"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    className="min-h-24"
+            <div>
+              <h3 className="text-lg font-medium mb-2">Aperçu du document</h3>
+              {document.url ? (
+                <div className="border rounded-md overflow-hidden">
+                  <iframe 
+                    src={document.url} 
+                    className="w-full h-[500px]" 
+                    title={document.name}
                   />
-                  
-                  <div className="flex flex-col space-y-2">
-                    <Button
-                      onClick={handleValidate}
-                      disabled={loading || document.status !== 'pending'}
-                      className="w-full bg-green-600 hover:bg-green-700"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Valider le document
-                    </Button>
-                    
-                    <Button
-                      onClick={handleReject}
-                      disabled={loading || document.status !== 'pending' || !message}
-                      variant="destructive"
-                      className="w-full"
-                    >
-                      <XCircle className="h-4 w-4 mr-2" />
-                      Refuser le document
-                    </Button>
-                    
-                    <Button
-                      onClick={handleSendMessage}
-                      disabled={loading || !message}
-                      variant="outline"
-                      className="w-full"
-                    >
-                      <Send className="h-4 w-4 mr-2" />
-                      Envoyer un message
-                    </Button>
-                  </div>
                 </div>
-              </CardContent>
-              <CardFooter>
-                <p className="text-xs text-muted-foreground">
-                  La validation ou le rejet du document enverra automatiquement une notification au client.
-                </p>
-              </CardFooter>
-            </Card>
-          </div>
-        </div>
+              ) : (
+                <p className="text-muted-foreground">Aucun aperçu disponible</p>
+              )}
+            </div>
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/admin')}
+            >
+              Retour
+            </Button>
+            <div className="space-x-2">
+              <Button 
+                variant="destructive" 
+                onClick={rejectDocument}
+              >
+                <XCircle className="mr-2 h-4 w-4" />
+                Rejeter
+              </Button>
+              <Button 
+                variant="default" 
+                onClick={validateDocument}
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Valider
+              </Button>
+            </div>
+          </CardFooter>
+        </Card>
       </div>
-    </PageLayout>
+    </AdminLayout>
   );
 };
 
