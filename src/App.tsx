@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -40,6 +39,11 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   if (!user) {
     return <Navigate to="/login" />;
   }
+
+  // Redirect admin users to admin dashboard
+  if (isAdmin(user) && window.location.pathname === '/dashboard') {
+    return <Navigate to="/admin" />;
+  }
   
   return <>{children}</>;
 };
@@ -73,12 +77,14 @@ const TestUsersNotification = () => {
 };
 
 const AppRoutes = () => {
+  const { user } = useAuth();
+
   return (
     <Routes>
-      {/* Public Routes */}
-      <Route path="/" element={<Index />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      {/* Public Routes - redirect to dashboard if already logged in */}
+      <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Index />} />
+      <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
+      <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
       
       {/* User Routes (Protected) */}
       <Route path="/dashboard" element={
