@@ -1,6 +1,7 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,11 +25,19 @@ interface Document {
   user_id: string;
 }
 
+interface UserProfile {
+  id: string;
+  full_name: string;
+  company_name: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
 const DocumentValidation = () => {
   const { id: documentId } = useParams<{ id: string }>();
   const [document, setDocument] = useState<Document | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userDetails, setUserDetails] = useState<any>(null);
+  const [userDetails, setUserDetails] = useState<UserProfile | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -45,7 +54,7 @@ const DocumentValidation = () => {
 
         if (error) throw error;
         if (data) {
-          setDocument(data);
+          setDocument(data as Document);
           
           // Fetch user details
           const { data: userData, error: userError } = await supabase
@@ -55,7 +64,7 @@ const DocumentValidation = () => {
             .single();
             
           if (userError) throw userError;
-          setUserDetails(userData);
+          setUserDetails(userData as UserProfile);
         }
       } catch (error: any) {
         toast({
@@ -75,7 +84,11 @@ const DocumentValidation = () => {
     try {
       const { error } = await supabase
         .from('documents')
-        .update({ status: 'validated' as any }) // Utilisation de 'as any' pour contourner l'erreur de type
+        .update({ 
+          status: 'validated',
+          validated_at: new Date().toISOString(),
+          validated_by: (await supabase.auth.getUser()).data.user?.id
+        })
         .eq('id', documentId);
         
       if (error) throw error;
@@ -99,7 +112,7 @@ const DocumentValidation = () => {
     try {
       const { error } = await supabase
         .from('documents')
-        .update({ status: 'rejected' as any }) // Utilisation de 'as any' pour contourner l'erreur de type
+        .update({ status: 'rejected' })
         .eq('id', documentId);
         
       if (error) throw error;

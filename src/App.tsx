@@ -7,7 +7,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { NotificationsProvider } from "./contexts/NotificationsContext";
 import { useAuth } from "./contexts/AuthContext";
-import { isAdmin } from "./lib/utils";
+import { useEffect } from "react";
+import { toast } from "@/components/ui/use-toast";
 
 // Public Pages
 import Index from "./pages/Index";
@@ -23,6 +24,10 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import DocumentValidation from "./pages/admin/DocumentValidation";
 
 const queryClient = new QueryClient();
+
+const isAdmin = (user: any): boolean => {
+  return user?.user_metadata?.user_type === 'admin';
+};
 
 // Route guards
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
@@ -51,6 +56,20 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   return <>{children}</>;
+};
+
+const TestUsersNotification = () => {
+  useEffect(() => {
+    setTimeout(() => {
+      toast({
+        title: "Comptes de test disponibles",
+        description: "Admin: admin@test.com / Client: client@test.com (Mot de passe: password123)",
+        duration: 10000,
+      });
+    }, 2000);
+  }, []);
+  
+  return null;
 };
 
 const AppRoutes = () => {
@@ -93,6 +112,7 @@ const App = () => (
         <NotificationsProvider>
           <Toaster />
           <Sonner />
+          <TestUsersNotification />
           <BrowserRouter>
             <AppRoutes />
           </BrowserRouter>

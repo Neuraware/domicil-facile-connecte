@@ -107,6 +107,117 @@ export type Database = {
         }
         Relationships: []
       }
+      documents: {
+        Row: {
+          comments: string | null
+          created_at: string
+          id: string
+          name: string
+          status: string
+          type: string
+          url: string
+          user_id: string
+          validated_at: string | null
+          validated_by: string | null
+        }
+        Insert: {
+          comments?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          status?: string
+          type: string
+          url: string
+          user_id: string
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Update: {
+          comments?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          status?: string
+          type?: string
+          url?: string
+          user_id?: string
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          read: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          read?: boolean | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          address: string | null
+          city: string | null
+          company_name: string | null
+          country: string | null
+          created_at: string
+          full_name: string
+          id: string
+          phone: string | null
+          postal_code: string | null
+          updated_at: string
+          user_type: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          company_name?: string | null
+          country?: string | null
+          created_at?: string
+          full_name: string
+          id: string
+          phone?: string | null
+          postal_code?: string | null
+          updated_at?: string
+          user_type?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          company_name?: string | null
+          country?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+          postal_code?: string | null
+          updated_at?: string
+          user_type?: string | null
+        }
+        Relationships: []
+      }
       sectors: {
         Row: {
           created_at: string | null
@@ -128,6 +239,45 @@ export type Database = {
           icon?: string | null
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          end_date: string | null
+          id: string
+          last_payment_date: string | null
+          payment_method: string | null
+          plan_id: string
+          price: number
+          recurring: boolean | null
+          start_date: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          end_date?: string | null
+          id?: string
+          last_payment_date?: string | null
+          payment_method?: string | null
+          plan_id: string
+          price: number
+          recurring?: boolean | null
+          start_date?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          end_date?: string | null
+          id?: string
+          last_payment_date?: string | null
+          payment_method?: string | null
+          plan_id?: string
+          price?: number
+          recurring?: boolean | null
+          start_date?: string
+          status?: string
+          user_id?: string
         }
         Relationships: []
       }

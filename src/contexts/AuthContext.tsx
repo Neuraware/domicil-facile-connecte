@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client'; // Utiliser le client importé de l'intégration
+import { supabase } from '@/lib/supabase';
 import { useToast } from "@/components/ui/use-toast";
 
 interface AuthContextType {
@@ -78,31 +78,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             full_name: userData.fullName,
             company_name: userData.companyName,
             phone: userData.phone,
+            address: userData.address,
+            city: userData.city,
+            postal_code: userData.postalCode,
+            country: userData.country,
+            user_type: 'client',
           },
         },
       });
       
       if (error) throw error;
       
-      // If user was created successfully, create profile
-      if (data.user) {
-        await supabase.from('profiles').insert({
-          id: data.user.id,
-          full_name: userData.fullName,
-          company_name: userData.companyName,
-          phone: userData.phone,
-          address: userData.address,
-          city: userData.city,
-          postal_code: userData.postalCode,
-          country: userData.country,
-          user_type: 'client',
-        });
-        
-        toast({
-          title: "Inscription réussie",
-          description: "Votre compte a été créé avec succès.",
-        });
-      }
+      toast({
+        title: "Inscription réussie",
+        description: "Votre compte a été créé avec succès.",
+      });
     } catch (error: any) {
       toast({
         title: "Erreur d'inscription",
@@ -154,7 +144,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!user) throw new Error("Utilisateur non connecté");
       
-      await supabase.from('profiles').update(data).eq('id', user.id);
+      const { error } = await supabase
+        .from('profiles')
+        .update(data)
+        .eq('id', user.id);
+        
+      if (error) throw error;
       
       toast({
         title: "Profil mis à jour",
